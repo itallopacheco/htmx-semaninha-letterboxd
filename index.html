@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letterboxd Movies</title>
+    <script src="https://unpkg.com/htmx.org@1.7.0"></script>
+</head>
+<body>
+    <div>
+        <input type="text" id="username" placeholder="Enter Letterboxd username">
+        <button hx-get="/fetch-movies" hx-target="#movies-list" onclick="fetchMovies()">Load Movies</button>
+    </div>
+    <div id="movies-list"></div>
+
+    <script>
+        async function fetchMovies() {
+            const username = document.getElementById("username").value;
+            const url = `https://letterboxd.com/${username}/rss/`;
+
+            try {
+                const response = await fetch(url);
+                const rssText = await response.text();
+
+                const parser = new DOMParser();
+                const rssDoc = parser.parseFromString(rssText, "application/xml");
+                const items = rssDoc.querySelectorAll("item");
+
+                let moviesHtml = "";
+                items.forEach(item => {
+                    const title = item.querySelector("letterboxd\\:filmTitle")?.textContent;
+                    const rating = item.querySelector("letterboxd\\:memberRating")?.textContent || "No rating";
+                    const poster = item.querySelector("description").textContent;
+                    
+                    moviesHtml += `<div><h2>${title}</h2><p>${rating}</p><img src="${poster}" /></div>`;
+                });
+
+                document.getElementById("movies-list").innerHTML = moviesHtml;
+            } catch (error) {
+                console.error("Failed to fetch movies:", error);
+            }
+        }
+    </script>
+</body>
+</html>
