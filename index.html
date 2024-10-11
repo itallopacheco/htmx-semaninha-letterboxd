@@ -1,45 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Letterboxd Movies</title>
-    <script src="https://unpkg.com/htmx.org@1.7.0"></script>
-</head>
-<body>
-    <div>
-        <input type="text" id="username" placeholder="Enter Letterboxd username">
-        <button hx-get="/fetch-movies" hx-target="#movies-list" onclick="fetchMovies()">Load Movies</button>
-    </div>
-    <div id="movies-list"></div>
-
-    <script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Semaninha Letterboxd</title>
+    <script type="text/javascript">
+        const API_URL = "PLACEHOLDER_API_URL";
+        const API_KEY = "PLACEHOLDER_API_KEY";
+    </script>
+    <script type="text/javascript">
         async function fetchMovies() {
             const username = document.getElementById("username").value;
-            const url = `https://letterboxd.com/${username}/rss/`;
+            const apiKey = "JwbwyKME703tHnDll7fvk1sUZ9wbYgioa7aVZITe"; // Substitua por sua chave de API
+            const url = `https://qii4tv0ohd.execute-api.us-east-1.amazonaws.com/dev/lambda-get?username=${username}`;
 
             try {
-                const response = await fetch(url);
-                const rssText = await response.text();
-
-                const parser = new DOMParser();
-                const rssDoc = parser.parseFromString(rssText, "application/xml");
-                const items = rssDoc.querySelectorAll("item");
-
-                let moviesHtml = "";
-                items.forEach(item => {
-                    const title = item.querySelector("letterboxd\\:filmTitle")?.textContent;
-                    const rating = item.querySelector("letterboxd\\:memberRating")?.textContent || "No rating";
-                    const poster = item.querySelector("description").textContent;
-                    
-                    moviesHtml += `<div><h2>${title}</h2><p>${rating}</p><img src="${poster}" /></div>`;
+                const response = await fetch(url, {
+                    headers: {
+                        "x-api-key": apiKey,
+                        "Content-Type": "application/json"
+                    }
                 });
 
-                document.getElementById("movies-list").innerHTML = moviesHtml;
+                if (!response.ok) {
+                    throw new Error("Erro na requisição: " + response.statusText);
+                }
+
+                const movies = await response.json();
+                displayMovies(movies);
             } catch (error) {
-                console.error("Failed to fetch movies:", error);
+                console.error("Erro ao buscar filmes:", error);
+                document.getElementById("movies-list").innerHTML = "<p>Erro ao buscar filmes.</p>";
             }
         }
+
+        function displayMovies(movies) {
+            const moviesList = document.getElementById("movies-list");
+            moviesList.innerHTML = "";
+
+            if (movies.length === 0) {
+                moviesList.innerHTML = "<p>Nenhum filme encontrado.</p>";
+                return;
+            }
+
+            movies.forEach(movie => {
+                const movieItem = document.createElement("div");
+                movieItem.innerHTML = `
+                    <h3>${movie.title}</h3>
+                    <p>Rating: ${movie.rating}</p>
+                    <p>Rewatch: ${movie.rewatch}</p>
+                    <img src="${movie.posterMedium}" alt="${movie.title} poster" />
+                    <hr />
+                `;
+                moviesList.appendChild(movieItem);
+            });
+        }
     </script>
+</head>
+<body>
+    <h1>Semaninha Letterboxd</h1>
+    <div>
+        <label for="username">Usuário Letterboxd:</label>
+        <input type="text" id="username" placeholder="Digite o nome de usuário" />
+        <button type="button" onclick="fetchMovies()">Buscar Filmes</button>
+    </div>
+
+    <div id="movies-list">
+        <!-- Os filmes serão exibidos aqui -->
+    </div>
 </body>
 </html>
