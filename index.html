@@ -1,18 +1,101 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Semaninha Letterboxd</title>
-    <script type="text/javascript">
-        const API_URL = "PLACEHOLDER_API_URL";
-        const API_KEY = "PLACEHOLDER_API_KEY";
-    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultar Filmes no Letterboxd</title>
+    <style>
+        /* Importa as fontes */
+        @font-face {
+            font-family: 'NotoSans';
+            src: url('./fonts/NotoSans-Bold.ttf') format('truetype');
+            font-weight: bold;
+        }
+
+        @font-face {
+            font-family: 'NotoSansSymbol';
+            src: url('./fonts/NotoSans-Symble.ttf') format('truetype');
+            font-weight: normal;
+        }
+
+        /* Layout flexível para o container */
+        #movies-display {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        /* Estilos para o canvas */
+        #collage-canvas {
+            display: none;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+        }
+
+        /* Indicador de carregamento */
+        #loading-indicator {
+            display: none;
+            font-size: 18px;
+            color: #555;
+            margin-top: 20px;
+        }
+
+        /* Estilos para cada pôster */
+        .movie-poster {
+            position: relative;
+            width: 150px;
+            height: 225px;
+            background-size: cover;
+            background-position: center;
+            color: white;
+            text-align: left;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        /* Estilos para o título e avaliação */
+        .movie-title {
+            position: absolute;
+            bottom: 30px;
+            left: 5px;
+            font-size: 15px;
+            font-weight: bold;
+            font-family: 'NotoSans';
+            padding: 3px 5px;
+            border-radius: 3px;
+        }
+
+        .movie-rating {
+            position: absolute;
+            bottom: 10px;
+            left: 5px;
+            font-size: 20px; 
+            font-family: 'NotoSansSymbol';
+            color: green;
+            padding: 3px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Semaninha Letterboxd</h1>
+    <div id="movies-list">
+        <label for="username">Usuário Letterboxd:</label>
+        <input type="text" id="username" placeholder="Digite o nome de usuário" />
+        <button type="button" onclick="generateCollage()">Buscar Filmes</button>
+    </div>
+    <div id="movies-display"></div>
+    <div id="loading-indicator">Gerando colagem, por favor aguarde...</div>
+    <canvas id="collage-canvas" width="1200" height="1800"></canvas> <!-- 4 colunas * 300px e 3 linhas * 600px -->
+
     <script type="text/javascript">
         async function fetchMovies() {
             const username = document.getElementById("username").value;
-            const apiKey = "JwbwyKME703tHnDll7fvk1sUZ9wbYgioa7aVZITe"; // Substitua por sua chave de API
-            const url = `https://qii4tv0ohd.execute-api.us-east-1.amazonaws.com/dev/lambda-get?username=${username}`;
+            const apiKey = "PLACEHOLDER_API_KEY";  // Placeholder para ser substituído pela action
+            const url = `PLACEHOLDER_API_URL/lambda-get?username=${username}`;  // Placeholder para ser substituído pela action
 
             try {
                 const response = await fetch(url, {
@@ -27,46 +110,92 @@
                 }
 
                 const movies = await response.json();
-                displayMovies(movies);
+                return movies;
             } catch (error) {
                 console.error("Erro ao buscar filmes:", error);
-                document.getElementById("movies-list").innerHTML = "<p>Erro ao buscar filmes.</p>";
+                return [];
+            }
+        }
+        
+        async function fetchPosterImage(movie) {
+            const apiUrl = "PLACEHOLDER_API_URL/img-proxy";
+            
+            const body = JSON.stringify({
+                url: movie.posterLarge
+            });
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: body
+                });
+
+                if (!response.ok) {
+                    throw new Error("Erro na requisição: " + response.statusText);
+                }
+
+                const imageData = await response.json();
+
+                if (imageData.image.startsWith("/9j/")) {
+                    return `data:image/jpeg;base64,${imageData.image}`;
+                }
+                return imageData.image;
+            } catch (error) {
+                console.error("Erro ao buscar imagem do pôster:", error);
+                return "";
             }
         }
 
-        function displayMovies(movies) {
-            const moviesList = document.getElementById("movies-list");
-            moviesList.innerHTML = "";
+        async function generateCollage() {
+            // Exibe o indicador de carregamento e oculta o canvas inicialmente
+            const loadingIndicator = document.getElementById("loading-indicator");
+            const canvas = document.getElementById("collage-canvas");
+            loadingIndicator.style.display = "block";
+            canvas.style.display = "none";
 
-            if (movies.length === 0) {
-                moviesList.innerHTML = "<p>Nenhum filme encontrado.</p>";
-                return;
+            const movies = await fetchMovies();
+            const context = canvas.getContext("2d");
+            const posterWidth = 300;  // Novo tamanho para alta resolução
+            const posterHeight = 450; // Novo tamanho para alta resolução
+
+            // Define o tamanho do canvas para 4 colunas e 3 linhas
+            canvas.width = posterWidth * 4; // 4 colunas
+            canvas.height = posterHeight * 3; // 3 linhas
+
+            for (let i = 0; i < Math.min(12, movies.length); i++) {
+                const movie = movies[i];
+                const posterImage = await fetchPosterImage(movie);
+                
+                // Carregar a imagem do pôster
+                const img = new Image();
+                img.src = posterImage;
+                await new Promise((resolve) => (img.onload = resolve));
+
+                // Calcula a posição no grid
+                const x = (i % 4) * posterWidth;
+                const y = Math.floor(i / 4) * posterHeight;
+
+                // Desenha o pôster
+                context.drawImage(img, x, y, posterWidth, posterHeight);
+
+                // Desenha o título
+                context.font = "20px NotoSans";
+                context.fillStyle = "white";
+                context.fillText(movie.title, x + 10, y + posterHeight - 40);
+
+                // Desenha o rating
+                context.font = "25px NotoSansSymbol";
+                context.fillStyle = "green";
+                context.fillText(movie.rating, x + 10, y + posterHeight - 15);
             }
 
-            movies.forEach(movie => {
-                const movieItem = document.createElement("div");
-                movieItem.innerHTML = `
-                    <h3>${movie.title}</h3>
-                    <p>Rating: ${movie.rating}</p>
-                    <p>Rewatch: ${movie.rewatch}</p>
-                    <img src="${movie.posterMedium}" alt="${movie.title} poster" />
-                    <hr />
-                `;
-                moviesList.appendChild(movieItem);
-            });
+            // Oculta o indicador de carregamento e exibe o canvas
+            loadingIndicator.style.display = "none";
+            canvas.style.display = "block";
         }
     </script>
-</head>
-<body>
-    <h1>Semaninha Letterboxd</h1>
-    <div>
-        <label for="username">Usuário Letterboxd:</label>
-        <input type="text" id="username" placeholder="Digite o nome de usuário" />
-        <button type="button" onclick="fetchMovies()">Buscar Filmes</button>
-    </div>
-
-    <div id="movies-list">
-        <!-- Os filmes serão exibidos aqui -->
-    </div>
 </body>
 </html>
