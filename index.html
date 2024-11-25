@@ -117,6 +117,24 @@
             }
         }
         
+        function formatRating(rating) {
+            const ratingMap = {
+                "0": "",
+                "0.5": "½",
+                "1": "★",
+                "1.5": "★½",
+                "2": "★★",
+                "2.5": "★★½",
+                "3": "★★★",
+                "3.5": "★★★½",
+                "4": "★★★★",
+                "4.5": "★★★★½",
+                "5": "★★★★★"
+            };
+            return ratingMap[rating] || ""; // Retorna "" se o rating não estiver no mapa.
+        }
+
+
         async function fetchPosterImage(movie) {
             const apiUrl = "PLACEHOLDER_API_URL/img-proxy";
             
@@ -186,10 +204,11 @@
                 context.fillStyle = "white";
                 context.fillText(movie.title, x + 10, y + posterHeight - 40);
 
-                // Desenha o rating
+                // Formata e desenha o rating
+                const formattedRating = formatRating(movie.rating); // Aqui está a função sendo usada
                 context.font = "25px NotoSansSymbol";
                 context.fillStyle = "green";
-                context.fillText(movie.rating, x + 10, y + posterHeight - 15);
+                context.fillText(formattedRating, x + 10, y + posterHeight - 15);
             }
 
             // Oculta o indicador de carregamento e exibe o canvas
