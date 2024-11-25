@@ -121,15 +121,15 @@
             const ratingMap = {
                 "0": "",
                 "0.5": "½",
-                "1": "★",
+                "1.0": "★",
                 "1.5": "★½",
-                "2": "★★",
+                "2.0": "★★",
                 "2.5": "★★½",
-                "3": "★★★",
+                "3.0": "★★★",
                 "3.5": "★★★½",
-                "4": "★★★★",
+                "4,0": "★★★★",
                 "4.5": "★★★★½",
-                "5": "★★★★★"
+                "5.0": "★★★★★"
             };
             return ratingMap[rating] || ""; // Retorna "" se o rating não estiver no mapa.
         }
@@ -174,7 +174,12 @@
             loadingIndicator.style.display = "block";
             canvas.style.display = "none";
 
+            // Busca todos os filmes
             const movies = await fetchMovies();
+
+            // Limita o número de filmes a 12
+            const limitedMovies = movies.slice(0, 12);
+
             const context = canvas.getContext("2d");
             const posterWidth = 300;  // Novo tamanho para alta resolução
             const posterHeight = 450; // Novo tamanho para alta resolução
@@ -183,38 +188,47 @@
             canvas.width = posterWidth * 4; // 4 colunas
             canvas.height = posterHeight * 3; // 3 linhas
 
-            for (let i = 0; i < Math.min(12, movies.length); i++) {
-                const movie = movies[i];
-                const posterImage = await fetchPosterImage(movie);
-                
+            // Busca as imagens de todos os filmes de forma paralela
+            const posterImages = await Promise.all(
+                limitedMovies.map(movie => fetchPosterImage(movie))
+            );
+
+            // Renderiza as imagens no canvas
+            posterImages.forEach((posterImage, i) => {
+                if (!posterImage) return; // Ignora imagens inválidas
+
+                const movie = limitedMovies[i];
+
                 // Carregar a imagem do pôster
                 const img = new Image();
                 img.src = posterImage;
-                await new Promise((resolve) => (img.onload = resolve));
 
-                // Calcula a posição no grid
-                const x = (i % 4) * posterWidth;
-                const y = Math.floor(i / 4) * posterHeight;
+                img.onload = () => {
+                    // Calcula a posição no grid
+                    const x = (i % 4) * posterWidth;
+                    const y = Math.floor(i / 4) * posterHeight;
 
-                // Desenha o pôster
-                context.drawImage(img, x, y, posterWidth, posterHeight);
+                    // Desenha o pôster
+                    context.drawImage(img, x, y, posterWidth, posterHeight);
 
-                // Desenha o título
-                context.font = "20px NotoSans";
-                context.fillStyle = "white";
-                context.fillText(movie.title, x + 10, y + posterHeight - 40);
+                    // Desenha o título
+                    context.font = "20px NotoSans";
+                    context.fillStyle = "white";
+                    context.fillText(movie.title, x + 10, y + posterHeight - 40);
 
-                // Formata e desenha o rating
-                const formattedRating = formatRating(movie.rating); // Aqui está a função sendo usada
-                context.font = "25px NotoSansSymbol";
-                context.fillStyle = "green";
-                context.fillText(formattedRating, x + 10, y + posterHeight - 15);
-            }
+                    // Formata e desenha o rating
+                    const formattedRating = formatRating(movie.rating);
+                    context.font = "25px NotoSansSymbol";
+                    context.fillStyle = "green";
+                    context.fillText(formattedRating, x + 10, y + posterHeight - 15);
+                };
+            });
 
             // Oculta o indicador de carregamento e exibe o canvas
             loadingIndicator.style.display = "none";
             canvas.style.display = "block";
         }
+
     </script>
 </body>
 </html>
